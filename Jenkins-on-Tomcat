@@ -1,0 +1,150 @@
+yum install epel-release -y  or  sudo amazon-linux-extras install epel
+yum update -y ( Update Linux Machine )
+yum install java-1.8.0-openjdk-devel.x86_64 -y  ( Install Java) 
+Java -version ( Check version of Java) 
+yum install wget git -y  ( install wget and git)
+wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo ( download Jenkins Repo)
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key  ( Import Jenkins Key)
+yum install jenkins -y 
+systemctl start jenkins.service
+systemctl enable jenkins.service
+***************Not Required*************************************** 
+firewall-cmd —zone=public --permanent —add-port=8080/tcp firewall-cmd --reload
+***************Skip this step*************************************
+
+*****************Change jenkins port to 8081************** 
+sudo nano /etc/sysconfig/jenkins  ( look for port 8080 and change to 8081)
+cat /etc/sysconfig/jenkins |grep JENKINS_PO
+
+systemctl restart jenkins
+systemctl start jenkins
+systemctl status jenkins
+
+******************************Password from Jenkins*********************
+Cat /var/lib/jenkins/secrets/initialAdminPassword  ( copy the password in this admin and create account)
+
+************************Not required in AWS machine**************************
+ firewall-cmd --zone=public --permanent --add-port=8081/tcp
+******************************Install TOM CAT ON Linux*************************************
+groupadd tomcat
+sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+cd /tmp
+wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.41/bin/apache-tomcat-9.0.41.tar.gz
+mkdir /opt/tomcat
+tar -xzvf apache-tomcat-9*tar.gz -C /opt/tomcat --strip-components=1
+cd /opt/tomcat
+*********************Add permission*********************
+sudo chgrp -R tomcat /opt/tomcat
+chmod -R g+r conf
+chmod g+x conf
+chown -R tomcat webapps/ work/ temp/ logs/
+*******************************************************
+
+******************create new service**********************
+**************Check Java version************
+alternatives --config java
+
+*****+ 1 java-1.8.0-openjdk.x86_64 (/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.265.b01-1.amzn2.0.1.x86_64/jre/bin/java)
+
+****/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.265.b01-1.amzn2.0.1.x86_64/jre ******
+
+sudo nano /etc/systemd/system/tomcat.service
+*****************************************
+
+
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+
+[Service]
+Type=forking
+
+Environment=JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.265.b01-1.amzn2.0.1.x86_64/jre
+Environment=CATALINA_PID=/opt/tomcat/temp/tomcat.pid
+Environment=CATALINA_HOME=/opt/tomcat
+Environment=CATALINA_BASE=/opt/tomcat
+Environment='CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC'
+Environment='JAVA_OPTS=-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom'
+
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/opt/tomcat/bin/shutdown.sh
+
+User=tomcat
+Group=tomcat
+UMask=0007
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+***************************update user in the following file*******
+sudo nano /opt/tomcat/conf/tomcat-users.xml
+<user username="deployer" password="deployer" roles="manager-script"/>	
+
+nano /opt/tomcat/webapps/manager/META-INF/context.xml
+*************dyployment error so we have to commit these two lines*****
+<!--
+  <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+         allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />
+-->
+
+systemctl start tomcat
+systemctl status tomcat
+
+************************************************************
+
+Jenkins plugins 
+1- deployment container
+2 -
+
+****************************Global Tool Configuration********
+JDK| JDK-18= /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.265.b01-1.amzn2.0.1.x86_64/jre
+GIT| /bin/git (which git)
+MVN| 3.63
+
+****************************Creating Job************
+Source code management 
+GIT| Address for the repo ( from Git) 
+Credential ( your git hub credentials)
+Branch| */master
+**********************BUILD************
+Invoke Top-level Maven Targets
+Maven Version | mvm-363
+Goal | Clean install 
+************************Post build Actio****************
+WAR/EAR file | **/*.war
+Context path | / 
+Container | Tomcat 9.x Remote
+Credentials | deployer | deployer 
+Tomcat URL | URL IP with Port 8080
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
